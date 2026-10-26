@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The 4K Is a Lie — a forensic report on House of El</title>
+<meta name="description" content="We downloaded 720p, 1080p, 1440p and 2160p renditions of a House of El video, measured the spectrum, round-tripped the frames through 1080p, and compared them to native 4K references. The 4K is an upscale.">
+<style>
+  :root{
+    --bg:#f2eee4;
+    --paper:#fffdf7;
+    --ink:#161616;
+    --muted:#5d5a52;
+    --faint:#8b877c;
+    --line:#d8d0c1;
+    --accent:#b3261e;
+    --accent-2:#8f1d17;
+    --blue:#1f4e79;
+    --blue-2:#2f6f9f;
+    --green:#1e6b46;
+    --amber:#a46312;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    --sans: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(179,38,30,.045), transparent 28rem),
+      radial-gradient(circle at 88% 12%, rgba(31,78,121,.05), transparent 32rem),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--serif);
+    font-size:18px;
+    line-height:1.66;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent);text-underline-offset:.16em;text-decoration-thickness:1px}
+  a:hover{color:var(--accent-2)}
+  img{max-width:100%;height:auto;display:block}
+  code,kbd,pre{font-family:var(--mono)}
+  code{font-size:.84em;background:rgba(0,0,0,.055);padding:.12em .34em;border-radius:3px;border:1px solid rgba(0,0,0,.06)}
+  kbd{font-size:.78em;background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:.08em .35em}
+  hr{border:0;border-top:1px solid var(--line);margin:2.4rem 0}
+  ::selection{background:#f3c9c5;color:#111}
+
+  .page{max-width:1220px;margin:0 auto;padding:0 28px 80px}
+  .hero{padding:54px 0 24px;border-bottom:1px solid var(--line)}
+  .kicker{
+    font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--accent);display:flex;gap:10px;align-items:center;flex-wrap:wrap
+  }
+  .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block}
+  h1{
+    font-family:var(--sans);font-size:clamp(46px,8vw,104px);line-height:.92;
+    letter-spacing:-.055em;margin:18px 0 18px;font-weight:850;
+  }
+  h1 .thin{font-weight:300;color:var(--faint)}
+  .dek{font-size:clamp(20px,2.5vw,29px);line-height:1.35;max-width:900px;margin:0 0 26px;color:#2c2a26}
+  .meta{
+    display:flex;flex-wrap:wrap;gap:8px 20px;font-family:var(--sans);font-size:12.5px;
+    color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 0
+  }
+  .meta b{color:var(--ink);font-weight:700}
+  .tldr{
+    margin:34px 0 0;background:#151515;color:#f5f1e8;border-left:6px solid var(--accent);
+    padding:26px 30px;display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:26px;
+    box-shadow:0 18px 40px rgba(0,0,0,.12)
+  }
+  .tldr h2{font-family:var(--sans);font-size:13px;letter-spacing:.15em;text-transform:uppercase;margin:0 0 10px;color:#ffb4ad}
+  .tldr p{margin:0;font-size:15.5px;line-height:1.5;color:#ded8cb}
+  .tldr b{color:#fff}
+  .tldr .big{font-family:var(--mono);font-size:30px;line-height:1;color:#fff;display:block;margin-bottom:8px}
+
+  .layout{display:grid;grid-template-columns:210px minmax(0,1fr);gap:54px;align-items:start;margin-top:46px}
+  .toc{position:sticky;top:22px;font-family:var(--sans);font-size:12.5px;line-height:1.45}
+  .toc .toc-title{font-size:10.5px;letter-spacing:.17em;text-transform:uppercase;color:var(--faint);font-weight:700;margin-bottom:12px}
+  .toc a{display:block;color:var(--muted);text-decoration:none;padding:5px 0 5px 0;border-bottom:1px dotted transparent}
+  .toc a:hover,.toc a.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .toc .num{font-family:var(--mono);font-size:10px;color:var(--faint);margin-right:8px}
+  .toc .sub{padding-left:22px;font-size:11.5px;color:var(--faint)}
+  main{min-width:0}
+  section{margin:0 0 74px;scroll-margin-top:24px}
+  .sec-head{display:flex;align-items:baseline;gap:14px;border-top:2px solid var(--ink);padding-top:12px;margin-bottom:22px}
+  .sec-num{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.08em;white-space:nowrap}
+  h2{font-family:var(--sans);font-size:clamp(30px,4vw,44px);line-height:1.02;letter-spacing:-.035em;margin:0;font-weight:800}
+  h3{font-family:var(--sans);font-size:21px;line-height:1.15;letter-spacing:-.015em;margin:34px 0 10px;font-weight:750}
+  h4{font-family:var(--sans);font-size:15px;letter-spacing:.02em;margin:24px 0 6px;font-weight:750}
+  p{margin:0 0 16px}
+  .lede{font-size:20px;line-height:1.55;color:#2b2925}
+  .small{font-size:14.5px;color:var(--muted)}
+  .muted{color:var(--muted)}
+  .nowrap{white-space:nowrap}
+  .mono{font-family:var(--mono);font-size:.88em}
+  .accent{color:var(--accent)}
+  .blue{color:var(--blue)}
+  .green{color:var(--green)}
+  .amber{color:var(--amber)}
+  .rule{border-top:1px solid var(--line);margin:26px 0}
+
+  .metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:24px 0 28px}
+  .metric{background:var(--paper);border:1px solid var(--line);padding:16px 16px 14px;position:relative;overflow:hidden}
+  .metric::after{content:"";position:absolute;left:0;top:0;width:3px;height:100%;background:var(--accent)}
+  .metric .v{font-family:var(--mono);font-size:clamp(24px,3vw,36px);line-height:1;letter-spacing:-.04em;font-weight:700}
+  .metric .u{font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);margin-top:8px}
+  .metric .n{font-family:var(--sans);font-size:12.5px;line-height:1.35;color:var(--muted);margin-top:7px}
+  .metric.blue::after{background:var(--blue)}
+  .metric.green::after{background:var(--green)}
+  .metric.amber::after{background:var(--amber)}
+
+  .callout{border-left:4px solid var(--blue);background:rgba(31,78,121,.055);padding:18px 20px;margin:24px 0;font-size:16.5px}
+  .callout.red{border-left-color:var(--accent);background:rgba(179,38,30,.055)}
+  .callout.green{border-left-color:var(--green);background:rgba(30,107,70,.06)}
+  .callout.amber{border-left-color:var(--amber);background:rgba(164,99,18,.07)}
+  .callout p:last-child{margin-bottom:0}
+  .callout .label{font-family:var(--sans);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:var(--blue);display:block;margin-bottom:6px}
+  .callout.red .label{color:var(--accent)}
+  .callout.green .label{color:var(--green)}
+  .callout.amber .label{color:var(--amber)}
+
+  .badge{display:inline-block;font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;padding:2px 7px;border:1px solid currentColor;border-radius:2px;vertical-align:middle}
+  .badge.high{color:var(--green);background:rgba(30,107,70,.06)}
+  .badge.med{color:var(--amber);background:rgba(164,99,18,.07)}
+  .badge.low{color:var(--accent);background:rgba(179,38,30,.06)}
+
+  .table-wrap{overflow-x:auto;margin:22px 0 26px;border:1px solid var(--line);background:var(--paper)}
+  table{width:100%;border-collapse:collapse;font-family:var(--sans);font-size:13.5px;line-height:1.4}
+  caption{caption-side:top;text-align:left;font-family:var(--sans);font-size:12px;color:var(--faint);padding:10px 12px;border-bottom:1px solid var(--line)}
+  th,td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);background:rgba(0,0,0,.025);font-weight:800}
+  tr:last-child td{border-bottom:0}
+  td.num,th.num{text-align:right;font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+  tbody tr:hover{background:rgba(179,38,30,.035)}
+
+  figure{margin:26px 0 30px;background:var(--paper);border:1px solid var(--line);padding:12px 12px 10px}
+  figure img{width:100%;border:1px solid #e7e0d3;background:#fff}
+  figcaption{font-family:var(--sans);font-size:12.5px;line-height:1.45;color:var(--muted);padding:10px 4px 2px}
+  figcaption b{color:var(--ink)}
+  .fig-row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .fig-row figure{margin:0}
+
+  .quote{font-size:clamp(22px,2.7vw,30px);line-height:1.28;letter-spacing:-.02em;border-left:4px solid var(--accent);padding:6px 0 6px 22px;margin:28px 0;color:#26231f}
+  .quote small{display:block;font-family:var(--sans);font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin-top:12px}
+
+  details{background:var(--paper);border:1px solid var(--line);padding:12px 16px;margin:18px 0}
+  summary{cursor:pointer;font-family:var(--sans);font-size:13px;font-weight:750;letter-spacing:.01em;color:var(--blue)}
+  details[open] summary{margin-bottom:10px}
+  pre{overflow-x:auto;background:#161616;color:#e9e3d6;padding:14px 16px;font-size:12px;line-height:1.5;border-radius:3px;margin:12px 0}
+  pre .c{color:#9a9487}
+  pre .g{color:#8fd5a6}
+
+  .timeline{position:relative;margin:30px 0 10px;padding-left:26px}
+  .timeline::before{content:"";position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:linear-gradient(var(--accent),var(--blue))}
+  .tl{position:relative;margin:0 0 24px}
+  .tl::before{content:"";position:absolute;left:-26px;top:7px;width:12px;height:12px;border-radius:50%;background:var(--paper);border:2px solid var(--accent);box-shadow:0 0 0 4px var(--bg)}
+  .tl .date{font-family:var(--mono);font-size:11.5px;color:var(--accent);font-weight:700;letter-spacing:.02em}
+  .tl .what{font-family:var(--sans);font-size:15.5px;font-weight:750;margin:2px 0 4px}
+  .tl p{font-size:14.5px;color:var(--muted);margin:0}
+
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:24px 0}
+  .two-col .box{border:1px solid var(--line);background:var(--paper);padding:18px 18px 6px}
+  .two-col .box h3{margin:0 0 10px;font-size:16px;letter-spacing:.01em}
+  .two-col ul{margin:0 0 12px;padding-left:20px}
+  .two-col li{font-size:14.5px;line-height:1.45;margin-bottom:8px;color:#2f2c27}
+
+  .stat-row{display:flex;flex-wrap:wrap;gap:10px 18px;font-family:var(--sans);font-size:12px;color:var(--muted);margin:10px 0 0}
+  .stat-row b{font-family:var(--mono);color:var(--ink);font-size:13px}
+
+  .foot{font-family:var(--sans);font-size:12px;color:var(--faint);border-top:1px solid var(--line);padding-top:18px;margin-top:60px}
+  .top{font-family:var(--sans);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);text-decoration:none}
+
+  @media (max-width:1000px){
+    .page{padding:0 20px 60px}
+    .layout{grid-template-columns:1fr;gap:0}
+    .toc{position:static;display:grid;grid-template-columns:1fr 1fr;gap:0 18px;border:1px solid var(--line);background:var(--paper);padding:14px 16px;margin-bottom:34px}
+    .toc .toc-title{grid-column:1/-1;margin-bottom:6px}
+    .toc a{border-bottom:1px solid rgba(0,0,0,.05)}
+    .tldr{grid-template-columns:1fr}
+    .metric-grid{grid-template-columns:1fr 1fr}
+    .two-col,.fig-row{grid-template-columns:1fr}
+  }
+  @media (max-width:620px){
+    body{font-size:16.5px}
+    .hero{padding-top:34px}
+    .metric-grid{grid-template-columns:1fr}
+    .toc{grid-template-columns:1fr}
+    .tldr{padding:20px}
+    .quote{font-size:20px}
+    th,td{padding:7px 8px}
+  }
+  @media print{
+    body{background:#fff;font-size:10.5pt}
+    .page{max-width:none;padding:0}
+    .toc{display:none}
+    .layout{display:block}
+    .hero{padding-top:0}
+    .tldr{box-shadow:none;background:#fff;color:#000;border:1px solid #000}
+    .tldr p,.tldr b,.tldr .big{color:#000}
+    .tldr h2{color:#000}
+    figure,table,.callout,.timeline,.metric{break-inside:avoid}
+    a{color:#000;text-decoration:none}
+  }
+</style>
+</head>
+<body id="top">
+<div class="page">
+
+<header class="hero">
+  <div class="kicker"><span class="dot"></span> Forensic report · YouTube 4K · 26 October 2026</div>
+  <h1>The 4K <span class="thin">is a</span> lie.</h1>
+  <p class="dek">We downloaded the 720p, 1080p, 1440p and 2160p renditions of <em>House of El: AI</em>'s “What Happens When AI Runs the Country?”, measured the spectrum, round-tripped every frame through 1080p, and compared it to native 4K references. The 4K is an upscale. The person behind it is real. The “am I AI?” panic is a business model.</p>
+  <div class="meta">
+    <span><b>Video</b> rDKzAml5nn8</span>
+    <span><b>Duration</b> 11:22</span>
+    <span><b>Uploaded</b> 8 Jun 2025</span>
+    <span><b>Views</b> 3,804</span>
+    <span><b>Channel</b> House of El: AI</span>
+    <span><b>Person</b> Elena Markoska, PhD</span>
+    <span><b>Analysis</b> 26 Oct 2026</span>
+  </div>
+
+  <div class="tldr">
+    <div>
+      <h2>The finding</h2>
+      <p><span class="big">4K → 1080p</span>The 4K file is a 4K container with roughly 1080p information. The talking head is effectively <b>720–1080p</b>; the b-roll tops out around <b>1440p</b>; no scene shows convincing native 4K detail.</p>
+    </div>
+    <div>
+      <h2>The proof</h2>
+      <p><span class="big">52.6–54.3 dB</span>Downscaling the 4K face to 1080p and back reconstructs it almost perfectly (SSIM 0.986–0.997). Native 4K references compressed at the same bitrate score <b>26.6–33.7 dB</b>.</p>
+    </div>
+    <div>
+      <h2>The kicker</h2>
+      <p><span class="big">84%</span>Of 68 sampled frames are above 45 dB on the same round-trip test; 63% are above 50 dB. The 4K file is 5.2× larger because YouTube gives 4K more bits — not because it has more picture.</p>
+    </div>
+  </div>
+
+  <div class="callout green" style="margin-top:18px">
+    <span class="label">The plot twist</span>
+    <p><b>“El” is a real person.</b> Elena Markoska — PhD in Engineering Science (University of Southern Denmark, 2019), Senior Data Scientist at the Bank of England, co-author of BoE Staff Working Papers 924 and 943. The 4K is still an upscale; the synthetic production and the monetized “am I AI?” panic are real. If you came from the thread, this is the correction.</p>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc" aria-label="Contents">
+    <div class="toc-title">Contents</div>
+    <a href="#downloads"><span class="num">01</span> What we downloaded</a>
+    <a href="#method"><span class="num">02</span> How to catch an upscale</a>
+    <a href="#face"><span class="num">03</span> The face</a>
+    <a href="#broll"><span class="num">04</span> The b-roll</a>
+    <a href="#runtime"><span class="num">05</span> Across the runtime</a>
+    <a href="#metadata"><span class="num">06</span> The April 2026 timestamp</a>
+    <a href="#persona"><span class="num">07</span> The person &amp; the archive</a>
+    <a href="#prove"><span class="num">08</span> Prove / cannot prove</a>
+    <a href="#repro"><span class="num">09</span> Reproducibility</a>
+    <a href="#appendix"><span class="num">10</span> Appendix</a>
+    <a class="sub" href="#appendix-a">A. Format ladder</a>
+    <a class="sub" href="#appendix-b">B. Frame data</a>
+    <a class="sub" href="#appendix-c">C. Sources</a>
+  </nav>
+
+  <main>
+
+<section id="downloads">
+  <div class="sec-head"><span class="sec-num">01</span><h2>What we downloaded</h2></div>
+  <p class="lede">YouTube offered four video-only VP9 renditions and an AV1 ladder. We pulled the VP9 ladder because it is the highest-bitrate 4K version YouTube serves. If the best 4K stream has no extra detail, the lower-bitrate AV1 stream cannot have more.</p>
+
+  <div class="table-wrap">
+    <table>
+      <caption>Video-only streams, SDR, 30 fps, BT.709, yuv420p. Bitrates are the container's video track, not the HLS estimate.</caption>
+      <thead><tr><th>Rendition</th><th>Codec</th><th>Resolution</th><th class="num">Video bitrate</th><th class="num">File size</th><th>Role in this analysis</th></tr></thead>
+      <tbody>
+        <tr><td>720p</td><td>VP9</td><td>1280×720</td><td class="num">0.677 Mbps</td><td class="num">66.4 MiB</td><td>low-resolution control</td></tr>
+        <tr><td>1080p</td><td>VP9</td><td>1920×1080</td><td class="num">1.061 Mbps</td><td class="num">97.7 MiB</td><td>the suspected source resolution</td></tr>
+        <tr><td>1440p</td><td>VP9</td><td>2560×1440</td><td class="num">3.214 Mbps</td><td class="num">272.8 MiB</td><td>intermediate check</td></tr>
+        <tr><td><b>2160p</b></td><td><b>VP9</b></td><td><b>3840×2160</b></td><td class="num"><b>6.123 Mbps</b></td><td class="num"><b>509.3 MiB</b></td><td><b>the stream under test</b></td></tr>
+        <tr><td>2160p</td><td>AV1</td><td>3840×2160</td><td class="num">4.402 Mbps</td><td class="num">358.0 MiB</td><td>metadata only; lower bitrate</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="stat-row">
+    <span>Duration <b>682.241 s</b></span>
+    <span>Audio <b>Opus 52 kbps</b></span>
+    <span>4K / 1080p file ratio <b>5.21×</b></span>
+    <span>4K / 1080p bitrate ratio <b>5.77×</b></span>
+    <span>Pixel ratio <b>4.00×</b></span>
+  </div>
+
+  <p>The 4K file is <b>5.2× larger</b> than the 1080p file and gets <b>5.8× the video bitrate</b> for only <b>4× the pixels</b>. That is not evidence of detail. It is exactly what YouTube's per-resolution bitrate ladder does: higher resolutions get more bits, whether the source has the detail or not. The extra bits are spent on upscaled edges and compression noise.</p>
+
+  <div class="callout">
+    <span class="label">Why VP9 and not AV1?</span>
+    <p>The 4K AV1 stream is 4.40 Mbps — <b>28% lower</b> than the 6.12 Mbps VP9 stream. AV1 is more efficient, but it cannot invent detail that is not in the master. Testing the highest-bitrate 4K stream is the most generous test possible. If it fails, the AV1 version will not rescue it.</p>
+  </div>
+
+  <details>
+    <summary>The exact download and probe commands</summary>
+    <pre><span class="c"># video + original English audio (the video has 20 auto-dubbed tracks)</span>
+yt-dlp --no-playlist -f "313+251-20" --merge-output-format webm \
+  -o "rDKzAml5nn8_2160p_vp9.%(ext)s" \
+  "https://www.youtube.com/watch?v=rDKzAml5nn8"
+
+<span class="c"># same for 247+251-20, 248+251-20, 271+251-20</span>
+
+ffprobe -v error -select_streams v:0 \
+  -show_entries stream=width,height,codec_name,pix_fmt,color_range,color_space,r_frame_rate \
+  -show_entries format=duration,size,bit_rate -of default=nw=1 \
+  rDKzAml5nn8_2160p_vp9.webm</pre>
+  </details>
+
+  <p class="small">The container tag is <code>ENCODER=Lavf63.1.102</code> — YouTube's muxer. There is no camera, NLE, or uploader metadata left in the file. YouTube strips it. The only timestamps available are the stream-level <code>lmt</code> values discussed in section 06.</p>
+</section>
+
+<section id="method">
+  <div class="sec-head"><span class="sec-num">02</span><h2>How to catch an upscale</h2></div>
+  <p class="lede">One test can lie. Four tests that agree are hard to argue with. We used the frequency spectrum, a 1080p round-trip, cross-resolution prediction, and a native 4K reference compressed at the same bitrate.</p>
+
+  <h3>1. The spectral fingerprint</h3>
+  <p>A real 4K image contains detail at spatial frequencies up to <b>0.5 cycles/pixel</b>. If you upscale a 1080p image to 4K, the highest real frequency is <b>0.25 cycles/pixel</b>: 1080p's Nyquist limit lands exactly halfway across the 4K spectrum. Above 0.25 you get interpolation ringing and compression noise, not new detail. A radial FFT of the luma plane shows this immediately: native 4K keeps declining; an upscale hits a wall at 0.25 and then flattens into a noise floor.</p>
+
+  <h3>2. The 1080p round-trip</h3>
+  <p>Take the 4K frame, downscale it to 1080p with a proper area filter, then upscale it back to 4K with Lanczos. If the 4K contained real detail above 1080p, that detail is gone and the reconstruction error is large. If the 4K is already a 1080p upscale, the round-trip is nearly lossless. We report PSNR and SSIM on a central crop, with the border excluded.</p>
+
+  <div class="callout amber">
+    <span class="label">Why the round-trip needs a native reference</span>
+    <p>A native 4K image of a smooth gradient can also round-trip at a high PSNR: it has little high-frequency detail to lose. “AI-generated content is soft” is a real objection. That is why we encoded two native 4K photographs at the same 6 Mbps with VP9 and ran the identical test. The reference gives us the loss you <em>should</em> see when a genuinely detailed 4K frame is forced through 1080p.</p>
+  </div>
+
+  <h3>3. Cross-resolution prediction</h3>
+  <p>Upscale the 720p, 1080p and 1440p renditions to 4K and compare each one to the actual 4K frame. The smallest rendition that predicts the 4K as well as the next one up is the effective source resolution. If 720p and 1080p predict the 4K face identically, the 4K face has no information that 720p lacks.</p>
+
+  <h3>4. Native 4K calibration</h3>
+  <p>We used a detailed 4K city photograph and a 4K portrait with real skin texture, encoded each as a 2-second VP9 video at <b>6 Mbps</b>, extracted a frame, and ran the same 4K→1080p→4K test. The reference loses real detail and scores much lower. It is not a perfect content match — a photo is not an AI avatar — but it calibrates the metric at the same bitrate and codec.</p>
+
+  <div class="fig-row">
+    <figure>
+      <img src="assets/native_city_ref.jpg" alt="Native 4K city reference frame">
+      <figcaption><b>Native 4K city reference.</b> 3840×2160 photo, VP9 6 Mbps. Round-trip through 1080p: <b>26.6 dB</b>, SSIM 0.897.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/native_face_ref.jpg" alt="Native 4K portrait reference frame">
+      <figcaption><b>Native 4K portrait reference.</b> 3840×3840 crop, VP9 6 Mbps. Round-trip through 1080p: <b>33.8 dB</b>, SSIM 0.886.</figcaption>
+    </figure>
+  </div>
+
+  <h3>5. Chroma: the tell YouTube forgets</h3>
+  <p>Every stream is 4:2:0. At 4K, the chroma planes are 1920×1080; at 1080p, they are 960×540. If the 4K master is a 1080p upscale, its 4K chroma is just the 1080p chroma upscaled. We extracted the U and V planes with <code>ffmpeg -vf extractplanes=u</code> and compared them. A native 4K source should have chroma detail beyond the 1080p chroma; an upscale cannot.</p>
+
+  <h3>6. The visual high-pass</h3>
+  <p>We subtracted a Gaussian blur (σ = 2 px at 4K) and amplified the residual. Native 4K shows pores, individual hairs, fabric weave, window frames, foliage. An upscale shows the same edges as 1080p plus a little noise. This is the test a human can read without trusting a number.</p>
+
+  <div class="callout green">
+    <span class="label">The rule of thumb</span>
+    <p>If a 4K frame can be reconstructed from 1080p at <b>&gt; 45 dB</b>, it is effectively 1080p or lower. If it scores <b>&lt; 35 dB</b>, it contains real detail above 1080p (or the compression is very noisy). A native 4K frame at 6 Mbps usually lands in the high 20s to mid 30s. Our face lands at <b>52.6 dB</b>.</p>
+  </div>
+</section>
+
+<section id="face">
+  <div class="sec-head"><span class="sec-num">03</span><h2>The face</h2></div>
+  <p class="lede">The talking head is the point of the video. It is also the clearest upscale. At the same display size, 1080p, 1440p and 2160p are the same face with different amounts of compression noise. There is no pore, no fine hair, no fabric weave, no skin texture in the 4K that is not already in the 1080p.</p>
+
+  <figure>
+    <img src="assets/face_3up.jpg" alt="Face comparison at 1080p, 1440p and 2160p">
+    <figcaption><b>Same field of view, same display size.</b> 1080p (left), 1440p (middle), 2160p (right), all resampled to 800×800 with Lanczos. The 4K is slightly cleaner; it is not more detailed. The face is an AI avatar with a waxy, low-frequency surface to begin with.</figcaption>
+  </figure>
+
+  <div class="metric-grid">
+    <div class="metric"><div class="v">52.6 <span style="font-size:16px">dB</span></div><div class="u">4K → 1080p → 4K</div><div class="n">face at 360 s, PSNR. Native portrait ref: 33.8 dB.</div></div>
+    <div class="metric blue"><div class="v">0.986</div><div class="u">SSIM</div><div class="n">face at 360 s. Native portrait ref: 0.886.</div></div>
+    <div class="metric green"><div class="v">42.01</div><div class="u">720 → 4K, dB</div><div class="n">vs 42.07 dB for 1080 → 4K. A 0.06 dB difference.</div></div>
+    <div class="metric amber"><div class="v">4.8e−5</div><div class="u">high / low power</div><div class="n">face spectrum above 0.25 cyc/px. Native city ref: 3.97e−2.</div></div>
+  </div>
+
+  <figure>
+    <img src="assets/face_highpass.jpg" alt="High-pass comparison of the face at 1080p, 1440p and 2160p">
+    <figcaption><b>High-pass detail, amplified 25×.</b> The 4K panel (right) has the same edges — hairline, eyes, lips, mic cable — and no skin texture. It is actually smoother than the 1080p panel: the 4K encoder removed the compression speckle and replaced it with a clean blur. A native 4K face would show pores and individual hairs here.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="assets/spectrum_face.png" alt="Radial luma power spectrum of the face">
+    <figcaption><b>Radial luma power spectrum.</b> The 1080p curve falls off at 0.25 cycles/px (its Nyquist). The 1440p curve falls off at 0.375. The 4K curve continues but flattens into a <b>noise floor around 1e−4</b> above 0.25. That is not detail; it is the spectrum of compression noise. A native 4K reference keeps declining with real structure.</figcaption>
+  </figure>
+
+  <div class="quote">
+    “A native 4K portrait compressed at 6 Mbps scores 33.8 dB on the same test. The face scores 52.6 dB. That is a 19 dB gap — roughly 77× lower mean-squared error.”
+    <small>The gap is the upscale</small>
+  </div>
+
+  <h3>The 720p bombshell</h3>
+  <p>If the 4K face had any real detail beyond 1080p, the 1080p rendition would predict it better than the 720p rendition. It does not. Upscaling 720p to 4K and comparing to the actual 4K gives <b>42.01 dB</b>; upscaling 1080p gives <b>42.07 dB</b>. The difference is <b>0.06 dB</b> — within measurement noise. The 4K face contains essentially all of the information that is already in the 720p rendition.</p>
+
+  <p>This is the signature of a low-resolution avatar pipeline: a 1080p (or lower) talking-head generator, a 4K timeline, and a resize on export. The 4K file is real 3840×2160; the face is not.</p>
+
+  <h3>Chroma agrees</h3>
+  <p>The 4K chroma planes are 1920×1080. If they were native, they would carry detail beyond the 1080p chroma (960×540). They do not: upscaling the 1080p U/V planes to 1920×1080 and comparing gives <b>50.8 dB (U)</b> and <b>51.5 dB (V)</b> for the face. The 4K chroma is a smooth resize of the 1080p chroma. The same test on the b-roll city gives 48.6/50.7 dB; the crowd gives 43.7/44.5 dB.</p>
+
+  <div class="callout red">
+    <span class="label">What this means</span>
+    <p>The 4K face is not a “better encode” of a 4K performance. It is a 1080p performance encoded at 4K. If you switch YouTube from 1080p to 2160p, you are paying 5× the bandwidth for a slightly cleaner resize of the same face.</p>
+  </div>
+</section>
+
+<section id="broll">
+  <div class="sec-head"><span class="sec-num">04</span><h2>The b-roll</h2></div>
+  <p class="lede">Not every frame is the avatar. The video cuts to AI-generated cityscapes, a protest crowd, typography vortexes, newspaper graphics and control-room shots. Some of that b-roll has more texture than the face. None of it is convincing native 4K.</p>
+
+  <figure>
+    <img src="assets/contact_sheet.jpg" alt="Contact sheet of the video every 10 seconds">
+    <figcaption><b>What the video actually contains.</b> A ten-second contact sheet: roughly two-thirds talking head, one-third b-roll and motion graphics. The avatar is the dominant subject; the b-roll is where any higher-resolution detail would have to live.</figcaption>
+  </figure>
+
+  <h3>City b-roll, 240 s</h3>
+  <div class="fig-row">
+    <figure>
+      <img src="assets/city_3up.jpg" alt="City b-roll comparison at 1080p, 1440p and 2160p">
+      <figcaption><b>City, same field of view.</b> The 4K has a little more texture on the building facades than the 1080p, but the 1440p is almost as good. Nothing here looks like a native 4K camera.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/city_highpass.jpg" alt="High-pass comparison of the city b-roll">
+      <figcaption><b>High-pass, amplified.</b> The 4K shows the same building edges and window grid. There is no new fine structure inside the facades; the extra energy is edge sharpening and noise.</figcaption>
+    </figure>
+  </div>
+
+  <div class="stat-row">
+    <span>4K→1080→4K <b>37.3 dB</b></span>
+    <span>Native city ref <b>26.6 dB</b></span>
+    <span>High/low power <b>1.39e−3</b></span>
+    <span>Native ref <b>3.97e−2</b> (29× higher)</span>
+    <span>1440→4K <b>36.7 dB</b></span>
+  </div>
+
+  <figure>
+    <img src="assets/spectrum_city.png" alt="Radial luma power spectrum of the city b-roll">
+    <figcaption><b>City spectrum.</b> The 4K curve is above 1080p and 1440p, but the high-frequency shelf is still 29× below the native 4K reference. The 1440p rendition already captures most of the usable detail.</figcaption>
+  </figure>
+
+  <h3>Crowd b-roll, 365 s — the honest complication</h3>
+  <p>The crowd shot is the one scene that gets close to the native-reference range. Its 4K→1080p→4K score is <b>29.1 dB</b>, between the native city (26.6 dB) and native portrait (33.8 dB). The 1440p→4K prediction is <b>30.0 dB</b>, clearly better than 1080p (25.6 dB). This could mean one of two things: a higher-resolution stock clip, or a very good upscale with sharpening. The high-pass image is the tiebreaker.</p>
+
+  <div class="fig-row">
+    <figure>
+      <img src="assets/crowd_3up.jpg" alt="Crowd b-roll comparison at 1080p, 1440p and 2160p">
+      <figcaption><b>Crowd, same field of view.</b> The 4K and 1440p panels are slightly crisper than 1080p. Individual people are still blobs; the detail is in edges, not faces.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/crowd_highpass.jpg" alt="High-pass comparison of the crowd b-roll">
+      <figcaption><b>Crowd high-pass.</b> The 4K panel shows the same head outlines and flag edges as the 1080p upscale. There is no new facial detail, no fabric texture, no sign text that appears only at 4K. It is sharper, not richer.</figcaption>
+    </figure>
+  </div>
+
+  <div class="callout amber">
+    <span class="label">The fair conclusion on the crowd</span>
+    <p>This scene may contain some real detail above 1080p. It is the strongest counter-example in the video. But it is a short stock-style b-roll clip, not the presenter, and even here the 4K does not reveal faces, clothing weave or sign text that the 1080p lacks. The video as a whole is still dominated by 1080p-limited content.</p>
+  </div>
+
+  <figure>
+    <img src="assets/spectrum_crowd.png" alt="Radial luma power spectrum of the crowd b-roll">
+    <figcaption><b>Crowd spectrum.</b> The 4K curve declines smoothly past 0.375 instead of flattening like the face. That is consistent with some real detail — or with a sharpening kernel. The high-pass image shows edges, not new texture.</figcaption>
+  </figure>
+
+  <h3>Typography and graphics, 285 s</h3>
+  <div class="fig-row">
+    <figure>
+      <img src="assets/text_3up.jpg" alt="Typographic b-roll comparison at 1080p, 1440p and 2160p">
+      <figcaption><b>Typography vortex, same field of view.</b> The words are soft at every resolution. If the overlay had been re-rendered at 4K, the letter edges would be crisp in the 4K panel. They are not.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/spectrum_typography.png" alt="Radial luma power spectrum of the typography b-roll">
+      <figcaption><b>Typography spectrum.</b> 4K→1080→4K: 35.7 dB. The text was scaled up with the rest of the frame, not re-rendered.</figcaption>
+    </figure>
+  </div>
+
+  <p>The graphics are the second tell. A 4K timeline with vector text would produce razor-sharp letter edges even if the underlying footage were upscaled. Here the text is soft and haloed at 4K, exactly like a 1080p frame that was resized. The whole composition — avatar, b-roll, overlays — appears to have been exported from a 1080p timeline and scaled to 4K in one pass.</p>
+</section>
+
+<section id="runtime">
+  <div class="sec-head"><span class="sec-num">05</span><h2>Across the runtime</h2></div>
+  <p class="lede">One frame can be unlucky. We sampled 68 frames, one every 10 seconds, and ran the 4K→1080p→4K round-trip on each. The distribution is not ambiguous.</p>
+
+  <div class="metric-grid">
+    <div class="metric"><div class="v">84%</div><div class="u">frames &gt; 45 dB</div><div class="n">57 of 68 sampled frames are effectively 1080p-limited.</div></div>
+    <div class="metric blue"><div class="v">63%</div><div class="u">frames &gt; 50 dB</div><div class="n">43 of 68 are almost perfectly reconstructed from 1080p.</div></div>
+    <div class="metric green"><div class="v">54.4 <span style="font-size:16px">dB</span></div><div class="u">median</div><div class="n">Minimum 29.3 dB, maximum 61.1 dB.</div></div>
+    <div class="metric amber"><div class="v">26.6–33.8 <span style="font-size:16px">dB</span></div><div class="u">native refs</div><div class="n">The range a real 4K frame lands in at the same bitrate.</div></div>
+  </div>
+
+  <figure>
+    <img src="assets/runtime_hist.png" alt="Histogram of round-trip PSNR across 68 frames">
+    <figcaption><b>The distribution.</b> Most of the video sits between 40 and 60 dB, far above the native 4K reference range (26–34 dB). The few low outliers are the dense b-roll scenes. If the video were native 4K, the bulk of this histogram would sit around the red/orange lines, not at 50+ dB.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="assets/timeseries.png" alt="Round-trip PSNR over time">
+    <figcaption><b>PSNR over time.</b> The avatar segments sit at 50–60 dB. The dips at 285 s and 365 s are the typography and crowd b-roll. The pattern is exactly what a 1080p timeline with occasional higher-resolution stock would produce.</figcaption>
+  </figure>
+
+  <div class="callout">
+    <span class="label">Caveat</span>
+    <p>PSNR is content-dependent. A smooth native 4K frame can score higher than a detailed 1080p frame. That is why the face spectrum and the native reference matter more than the histogram alone. The histogram tells you the <em>scale</em> of the effect; the spectrum tells you <em>why</em>.</p>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <caption>Effective resolution by scene. “Prediction” is PSNR between an upscaled lower rendition and the actual 4K frame.</caption>
+      <thead><tr><th>Scene</th><th class="num">720→4K</th><th class="num">1080→4K</th><th class="num">1440→4K</th><th class="num">4K→1080→4K</th><th>Read</th></tr></thead>
+      <tbody>
+        <tr><td>Face, 360 s</td><td class="num">42.0</td><td class="num">42.1</td><td class="num">44.8</td><td class="num">52.6</td><td><b>≤720p</b>: 720 and 1080 are identical</td></tr>
+        <tr><td>Face, 480 s</td><td class="num">45.4</td><td class="num">46.3</td><td class="num">48.5</td><td class="num">52.8</td><td><b>~720–1080p</b></td></tr>
+        <tr><td>City, 240 s</td><td class="num">30.4</td><td class="num">33.8</td><td class="num">36.7</td><td class="num">37.3</td><td><b>~1080–1440p</b></td></tr>
+        <tr><td>Crowd, 365 s</td><td class="num">23.1</td><td class="num">25.6</td><td class="num">30.0</td><td class="num">29.1</td><td><b>~1440p+</b>, possibly higher-res stock</td></tr>
+        <tr><td>Typography, 285 s</td><td class="num">24.9</td><td class="num">28.3</td><td class="num">31.4</td><td class="num">35.7</td><td><b>~1080–1440p</b>, text still soft</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The face is the dominant subject and the weakest link. The b-roll is a mixed bag: some of it is sharper than the face, none of it reaches a clean native-4K reference, and the graphics were clearly not re-rendered at 4K. The 4K upload is a single-pass resize of a mostly-1080p timeline, with a few higher-resolution stock clips surviving inside it.</p>
+</section>
+
+<section id="metadata">
+  <div class="sec-head"><span class="sec-num">06</span><h2>The April 2026 timestamp</h2></div>
+  <p class="lede">The video is dated 8 June 2025. When you download it with <code>yt-dlp</code>, the stream URLs carry <code>lmt</code> timestamps from 19 April 2026. That looks like a smoking gun. It is not. It is YouTube re-encoding its ladder — and it is a useful reminder that metadata is not pixels.</p>
+
+  <div class="table-wrap">
+    <table>
+      <caption>Stream-level <code>lmt</code> (last modified time) decoded from the videoplayback URLs.</caption>
+      <thead><tr><th>Stream</th><th>lmt</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td>Upload / publish date</td><td class="num">2025-06-08 14:28:33 UTC</td><td>The video was published.</td></tr>
+        <tr><td>VP9 720p</td><td class="num">2026-04-19 23:11:37</td><td rowspan="4">The whole VP9 ladder was re-encoded in one 26-second job.</td></tr>
+        <tr><td>VP9 1080p</td><td class="num">2026-04-19 23:11:42</td></tr>
+        <tr><td>VP9 1440p</td><td class="num">2026-04-19 23:11:59</td></tr>
+        <tr><td>VP9 2160p</td><td class="num">2026-04-19 23:12:03</td></tr>
+        <tr><td>AV1 1440p</td><td class="num">2026-05-22 06:35:01</td><td rowspan="2">The AV1 ladder arrived a month later — a separate codec rollout.</td></tr>
+        <tr><td>AV1 2160p</td><td class="num">2026-05-22 06:35:24</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><code>lmt</code> is not the upload date. It is the last time YouTube's encoder touched that stream. YouTube periodically re-encodes old videos, especially when it adds AV1 or refreshes a ladder. We checked other 2025 videos on the same channels and found <code>lmt</code> values scattered across February, April and July 2026. Some streams still carried their 2025 dates; others had been refreshed. This is normal infrastructure behavior, not evidence that the creator replaced the file.</p>
+
+  <div class="callout red">
+    <span class="label">Correction for the timeline theory</span>
+    <p>The April 2026 timestamp does <b>not</b> prove that the 4K was added in April 2026, and it does not prove that the creator uploaded a new master. YouTube re-encodes old videos. The 4K upscale is proven by the pixels, not by the timestamp. If you put “April 2026 = 4K added later” in a public thread, a YouTube engineer can correctly call it a red herring. The stronger claim is simpler: <b>the 4K stream itself is a 1080p upscale</b>, whenever it was encoded.</p>
+  </div>
+
+  <div class="callout">
+    <span class="label">Why upload a fake 4K at all?</span>
+    <p>YouTube gives the 4K stream <b>5.8× the video bitrate</b> of 1080p for only <b>4× the pixels</b>. The creator pays only the upload; YouTube pays the storage and bandwidth. A 4K upload also tends to get a better 1080p/1440p encode, a premium badge, and a perceived quality bump on large screens. It is a cheap trick with a real perceptual payoff — until someone measures the spectrum. The 4K file is 5.2× larger; the information is not.</p>
+  </div>
+
+  <p>The container metadata is equally unhelpful. The WebM tag is <code>ENCODER=Lavf63.1.102</code> — YouTube's muxer. There is no original camera, NLE, creation time, or uploader metadata. YouTube strips it. The only “original” metadata left is the video's publish date, title, description, chapters, tags, and the auto-dub/caption tracks. None of those tell you the source resolution.</p>
+
+  <div class="stat-row">
+    <span>Container <b>WebM</b></span>
+    <span>Video <b>VP9, 8-bit, 4:2:0</b></span>
+    <span>Color <b>BT.709, SDR</b></span>
+    <span>Audio <b>Opus 52 kbps</b></span>
+    <span>Auto-dubs <b>20 languages</b></span>
+    <span>Auto-captions <b>157 languages</b></span>
+  </div>
+</section>
+
+<section id="persona">
+  <div class="sec-head"><span class="sec-num">07</span><h2>The person is real. The brand is synthetic.</h2></div>
+  <p class="lede">The 4K is the easy part. The identity is the plot twist: “El” is not an AI invention. She is <b>Elena Markoska</b> — a real PhD in engineering science from the University of Southern Denmark, a former PhD research fellow, and a Senior Data Scientist at the Bank of England. The synthetic part is the production, the pseudonym, and the monetized “am I AI?” panic.</p>
+
+  <div class="callout green">
+    <span class="label">If you came from the thread</span>
+    <p>The strong claim — <em>there is no real person behind the character</em> — does not survive the public record. The weaker claim — <em>the character is a synthetic construction</em> — does. Both are true: the human is real; the on-screen persona is a brand with AI enhancement, AI clones and a 1080p→4K upscale. If you posted the strong claim, correct it; keep the weaker one.</p>
+  </div>
+
+  <h3>The public record</h3>
+  <div class="table-wrap">
+    <table>
+      <caption>Independent, public evidence for the person behind “El”.</caption>
+      <thead><tr><th>Source</th><th>What it says</th></tr></thead>
+      <tbody>
+        <tr><td>SDU research portal</td><td><b>Elena Markoska</b>, PhD thesis <em>A Framework for Automated Real-Time Performance Evaluation of Smart Buildings</em>, The Maersk Mc-Kinney Moller Institute, University of Southern Denmark, Odense. Published 29 Jul 2019; <b>degree awarded 15 Oct 2019</b>. Supervisors: Sanja Lazarova-Molnar, Mikkel K. Kragh. DOI <span class="mono">10.21996/5hay-tm27</span>.</td></tr>
+        <tr><td>OTOWN (local news, 5 Nov 2019)</td><td>“Som 5-årig ville Elena have en ph.d.-grad…” — a profile of <b>Elena Markoska</b>, PhD and software engineer from SDU; from Skopje, North Macedonia; came to Denmark in January 2016; defended her PhD in October 2019 on real-time monitoring of building energy use; then a research assistant at the Maersk Mc-Kinney Moller Institute.</td></tr>
+        <tr><td>Bank of England, Staff Working Paper No. 924 (2021)</td><td>“Impacts of the Covid-19 crisis: evidence from 2 million UK SMEs” — by James Hurley, Sudipto Karmakar, <b>Elena Markoska</b>, Eryk Walczak and Danny Walker.</td></tr>
+        <tr><td>Bank of England, Staff Working Paper No. 943 (2021)</td><td>“Did the Covid-19 local lockdowns…” — same author group, including <b>Elena Markoska</b>.</td></tr>
+        <tr><td>Bank of England, 2026 working paper</td><td>“Locking in the rate or staying flexible? Mortgage refinancing around an interest rate shock” — Cocco, <b>Markoska</b>, Tak.</td></tr>
+        <tr><td>LinkedIn (public profile, login-walled)</td><td>“Elena M. — <b>Senior Data Scientist at Bank of England</b>.” Public posts describe the BoE SME paper and her PhD work in Odense, Denmark.</td></tr>
+        <tr><td>Archived channel, Jan 2021</td><td>“Walk the walk”, 230–246 subscribers, keywords: PhD, Denmark, London, machine learning, academia, “why I moved out of denmark”. Videos: “5 unusual tips for starting your PhD”, “How to get a data science job during COVID”, “Going to Denmark?”. Archived thumbnails show a real woman with dark hair and bangs.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <caption>Education and experience, from the public LinkedIn profile and the SDU/BoE records.</caption>
+      <thead><tr><th>Period</th><th>Role / degree</th><th>Organisation</th></tr></thead>
+      <tbody>
+        <tr><td>2010–2014</td><td>BS, Academic Informatics Studies / Computer Science</td><td>Faculty of Computer Science and Engineering, Skopje</td></tr>
+        <tr><td>2014–2015</td><td>MS, Computer Software Engineering (10/10)</td><td>Faculty of Computer Science and Engineering, Skopje</td></tr>
+        <tr><td>2016–2019</td><td>PhD, Engineering Science; thesis on real-time building-performance evaluation; machine learning for time-series forecasting</td><td>University of Southern Denmark, Odense</td></tr>
+        <tr><td>2017</td><td>Research affiliate (6 months)</td><td>UC Berkeley / Lawrence Berkeley National Lab</td></tr>
+        <tr><td>2016–2020</td><td>PhD research fellow; R&amp;D scientist; teaching/examiner</td><td>University of Southern Denmark</td></tr>
+        <tr><td>Jan–Jul 2020</td><td>R&amp;D scientist</td><td>CSIRO, Newcastle, Australia</td></tr>
+        <tr><td>Oct 2020–Nov 2023</td><td>Data Scientist</td><td>Bank of England, London</td></tr>
+        <tr><td>Nov 2023–present</td><td>Senior Data Scientist (leads a data-science team)</td><td>Bank of England, London</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The old channel is not a random stolen backstory. It is Elena's own 2020–21 personal channel, created after the PhD, the CSIRO stint and the move to the Bank of England. The keywords, the video titles and the career timeline match the current bio almost word for word. The name “El” is most naturally read as short for Elena.</p>
+
+  <p>The local profile fills in the timeline: <b>Skopje → Odense in January 2016 → PhD defence in October 2019 → research assistant at SDU → London / Bank of England</b>. The old channel's “Going to Denmark?” video and its “why I moved out of denmark” keyword are not a borrowed backstory; they are her actual move. Third-party trackers recorded the old channel's country as North Macedonia; the current channel lists the UK. That is another small match, not a contradiction.</p>
+
+  <div class="timeline">
+    <div class="tl"><div class="date">Jan 2016 – Oct 2019</div><div class="what">Skopje → Odense; PhD at the University of Southern Denmark</div><p>Moves to Denmark in January 2016. Thesis: <em>A Framework for Automated Real-Time Performance Evaluation of Smart Buildings</em>. Published 29 July 2019; defended October 2019; degree awarded 15 October 2019. Research on metadata models, microservices and building-performance evaluation.</p></div>
+    <div class="tl"><div class="date">2019–2020</div><div class="what">Odense → Newcastle → London</div><p>R&amp;D scientist at CSIRO in Australia (Jan–Jul 2020), then Data Scientist at the Bank of England in London (Oct 2020). The old channel's “why I moved out of denmark” keyword and its “How to get a data science job during COVID” video fit this period.</p></div>
+    <div class="tl"><div class="date">2020–2021</div><div class="what">“Walk the walk” — a real personal channel</div><p>“5 unusual tips for starting your PhD”, “How to get a data science job during COVID”, “Going to Denmark?”. 230–246 subscribers. The videos are now private; the thumbnails survive in the Wayback Machine.</p></div>
+    <div class="tl"><div class="date">2021</div><div class="what">Bank of England Staff Working Papers 924 and 943</div><p>Co-author on the 2-million-SME Covid dataset and the local-lockdown paper. The “data scientist in finance” claim is not a persona; it is a CV.</p></div>
+    <div class="tl"><div class="date">23 Jan 2025</div><div class="what">houseofel.net is registered</div><p>Namecheap, privacy-protected. The current site launches within weeks.</p></div>
+    <div class="tl"><div class="date">Feb–Jun 2025</div><div class="what">The House of El brand is built</div><p>Website funnel, newsletter, quizzes, book, course waitlist, Ko-fi. The AI channel is created on 7 June 2025; the target video is uploaded on 8 June; the old 2020 channel is relaunched as “House of El” on 9 June.</p></div>
+    <div class="tl"><div class="date">23 Feb 2026</div><div class="what">“You're Right — I'm AI generated (Here's The Proof)”</div><p>470k views, 23.6k likes, 4.5k comments. She says she is real, admits to making four AI clone videos, and sells a course on spotting AI.</p></div>
+    <div class="tl"><div class="date">2026</div><div class="what">Two channels, ~453k combined subscribers</div><p>Main channel: ~298k subs, 578 videos, 60.4M views. AI channel: ~155k subs, 60 videos. Plus a 2026 BoE mortgage-refinancing paper. The output is daily-ish.</p></div>
+    <div class="tl"><div class="date">Sep 2026</div><div class="what">TikTok accounts are created</div><p>@realhouseofel: 161 followers, 8 videos. @realhouseofelai: 26 followers, 1 video. The audience is YouTube.</p></div>
+  </div>
+
+  <figure>
+    <img src="assets/persona_compare.jpg" alt="Old Walk the walk thumbnails next to the current House of El thumbnail">
+    <figcaption><b>2020–21 vs 2026.</b> The old channel is a real woman's PhD/data-science vlog: brown hair, bangs, natural skin, a patterned wall. The current “El” is blonde, heavily smoothed, and lit like a studio avatar. Hair colour changes; the face shape and career do not. The simplest explanation is the same person with a different production.</figcaption>
+  </figure>
+
+  <h3>The face: real person, synthetic presentation</h3>
+  <p>The 2021 archive shows a real woman with brown hair and bangs. The LinkedIn profile photo and the 2025–26 “El” are blonde. The face shape, nose and necklace are close enough that the same person is the most parsimonious explanation. But the current face is heavily smoothed, lit like a studio avatar, and looks AI-enhanced. The channel admits to using AI clones for four videos. Whether the current on-screen El is Elena with a beauty filter/upscaler or an avatar built from her likeness is unresolved. <b>The human is not.</b></p>
+
+  <p>This is the part the “she is fake” framing gets wrong. A real person can use an AI avatar of herself, a voice clone, AI b-roll and an upscale — and still be a real person. The synthetic production is evidence of a workflow, not of a non-existent human.</p>
+
+  <h3>The credential: real, but framed generously</h3>
+  <p>The PhD is real: <b>Engineering Science, University of Southern Denmark, 2019</b>. The thesis is about smart-building performance evaluation, metadata models, microservices and machine learning for time-series forecasting — not a pure AI doctorate, but not devoid of ML either. The channel's “PhD in Computer Science” is a simplification of a CS/software-engineering background (BS and MS in Skopje) inside an engineering doctorate. “AI-focused doctoral work” is a stretch, but the ML component is real. The “senior data scientist in policy and finance” is accurate: Bank of England, 2021–present, multiple working papers; before that, CSIRO and SDU. The “polymath” and “geopolitical analyst” are brand positioning, not credentials.</p>
+
+  <p>This is a fair criticism: the credential is not fake, but the marketing flatters it. “PhD in Computer Science” sounds more AI-adjacent than “PhD in Engineering Science on smart buildings.” The audience is not told which. The old channel actually supports the PhD claim — the videos are literally about starting a PhD and getting a data-science job — while the current channel upgrades the framing.</p>
+
+  <p>So “where are the papers?” has an answer: the SDU thesis, BoE Staff Working Papers 924 and 943, and a 2026 BoE mortgage-refinancing paper. They are real papers. They are just not AI papers — which is exactly why the “PhD in Computer Science / AI” framing does so much work.</p>
+
+  <h3>The “proof” video is still a sales pitch</h3>
+  <p>On 23 February 2026, the main channel published <a href="https://www.youtube.com/watch?v=K3SD34vHPe4">“You're Right — I'm AI generated (Here's The Proof)”</a>. The title is engineered to win the argument in the thumbnail. In the video she says:</p>
+
+  <div class="quote">
+    “I am very, very real, unfortunately real sometimes. I have bills, I get tired, I burn my toast… I've made four videos using an AI clone of myself… If you ever see a video of mine that looks like this, then it's AI. That would be AIL. All other versions of me are just human variations of a real human.”
+    <small>Transcript, 23 Feb 2026</small>
+  </div>
+
+  <p>With the SDU thesis and the BoE papers in hand, the core claim is credible. The video is still a produced comparison, not a live, unedited demonstration. It shows four intentionally bad AI clones, points out their lip-sync and blinking flaws, and concludes that the main El is real. It also links to the book, the audiobook, the AI course and the newsletter. The controversy is not just a defense; it is the top of the funnel. The video has <b>470k views</b> and <b>23.6k likes</b>, several times the target video's audience.</p>
+
+  <div class="callout amber">
+    <span class="label">The business model</span>
+    <p>YouTube → website → newsletter → book/course. The book <em>Awake: The Practice of Critical Thinking in an Age of Soft Lies</em> sells for <b>£11.45</b> on Gumroad, with <b>43 ratings</b> (4.3 average) and a “7,000+ readers” claim that Gumroad does not expose. The AI course is a waitlist; the newsletter claims “100k+ thinkers”; Ko-fi is linked in every description. The “PhD” is the trust anchor for all of it — and it is a real PhD, just not the one the branding implies.</p>
+  </div>
+
+  <h3>Why the pseudonym?</h3>
+  <p>Elena Markoska is a Senior Data Scientist at the Bank of England. A public YouTube channel that comments on geopolitics, AI and finance is a conflict-of-interest minefield for a central-bank employee. The channel's disclaimer says the views are her own and not her employer's. A pseudonym and a separate brand are a reasonable way to keep the day job and the YouTube job apart. That does not make the persona a deepfake; it makes it a professional boundary. It also, conveniently, makes the “is she AI?” question impossible to settle from the videos alone — which is good for engagement.</p>
+
+  <div class="two-col">
+    <div class="box">
+      <h3 class="green">The leading hypothesis <span class="badge high">Strong</span></h3>
+      <ul>
+        <li>Elena Markoska, PhD (SDU 2019), Senior Data Scientist at the Bank of England.</li>
+        <li>The 2020–21 “Walk the walk” channel is hers: PhD, Denmark, London, data science, “why I moved out of denmark”.</li>
+        <li>“El” is most naturally read as short for Elena; the pseudonym separates the Bank of England career from the YouTube brand.</li>
+        <li>The current face is Elena with heavy AI enhancement/upscaling — or an avatar built from her likeness. Either way, the human is real.</li>
+        <li>The AI clones, AI b-roll, auto-dubs and 4K upscale are production tools, not evidence of a non-existent person.</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3 class="accent">The alternative <span class="badge med">Weaker</span></h3>
+      <ul>
+        <li>An operator acquired the old channel and built a synthetic persona around Elena's public biography, papers and likeness.</li>
+        <li>This would explain the face change, the private old videos and the polished avatar.</li>
+        <li>But there is no evidence of a sale or transfer, and the simplest explanation is the same person rebranding.</li>
+        <li>The old channel's keywords and the current bio match too well to be a coincidence; the person is the through-line.</li>
+      </ul>
+    </div>
+  </div>
+
+  <p><b>Verdict: the person is real; the on-screen presentation is synthetic.</b> The 4K finding does not depend on the identity question, but the identity question changes the story. The interesting scandal is not “AI woman fools YouTube.” It is “a real PhD/data scientist rebranded her old channel into a faceless AI/geopolitics business, uses AI clones and a 1080p→4K upscale, and sells a course on spotting AI while the internet argues about whether she is AI.”</p>
+
+  <div class="callout red">
+    <span class="label">What this changes for the thread</span>
+    <p>The 4K upscale is real. The synthetic production is real. The monetized AI panic is real. The “there is no real person” claim is not. The “the character is a synthetic brand” claim is. Correct the first, keep the rest — that is the stronger, more defensible story.</p>
+  </div>
+</section>
+
+<section id="prove">
+  <div class="sec-head"><span class="sec-num">08</span><h2>Prove / cannot prove</h2></div>
+  <p class="lede">A good forensic report separates the measurement from the inference. Here is the line.</p>
+
+  <div class="two-col">
+    <div class="box">
+      <h3 class="green">What we can prove <span class="badge high">High confidence</span></h3>
+      <ul>
+        <li>The 2160p VP9 stream is an upscale. The face is effectively 720–1080p; the b-roll tops out around 1440p; no scene shows convincing native 4K detail.</li>
+        <li>The 4K face round-trips through 1080p at 52.6–54.3 dB (SSIM 0.986–0.997); native 4K references at the same bitrate score 26.6–33.8 dB.</li>
+        <li>720p and 1080p predict the 4K face equally well (42.01 vs 42.07 dB). The 4K adds no information above 720p for the face.</li>
+        <li>The 4K chroma is the 1080p chroma upscaled (50.8/51.5 dB).</li>
+        <li>84% of 68 sampled frames are above 45 dB; 63% are above 50 dB.</li>
+        <li>The 4K file is 5.2× larger because YouTube's bitrate ladder gives 4K 5.8× the video bitrate for 4× the pixels.</li>
+        <li><b>Elena Markoska</b> is a real, verifiable person: PhD in Engineering Science, University of Southern Denmark, degree awarded 15 Oct 2019; Senior Data Scientist at the Bank of England; co-author of BoE Staff Working Papers 924 and 943.</li>
+        <li>The 2020 “Walk the walk” channel is hers: the PhD/Denmark/London/data-science keywords and video titles match her career. The rebrand to “House of El” happened in 2025.</li>
+        <li>The channel admits to using AI clones for some videos, and the “am I AI?” video is a top-of-funnel product for the book/course.</li>
+        <li>The April 2026 <code>lmt</code> is a re-encode timestamp, not the upload date.</li>
+      </ul>
+    </div>
+    <div class="box">
+      <h3 class="accent">What we cannot prove <span class="badge low">Open</span></h3>
+      <ul>
+        <li>That the current on-screen face is Elena herself rather than an AI avatar/likeness. The human is verified; the face pipeline is not.</li>
+        <li>Whether the “PhD in Computer Science” / “AI-focused doctoral work” framing is an innocent simplification or deliberate flattery. The PhD is real, in Engineering Science, with machine learning for time-series forecasting; it is not an AI doctorate, but it is not unrelated either.</li>
+        <li>Whether the old channel was sold or transferred rather than rebranded by Elena. There is no evidence of a sale; the simplest explanation is the same person.</li>
+        <li>That the 4K was added in April 2026. YouTube re-encodes old videos; the timestamp is not evidence.</li>
+        <li>That the crowd b-roll is native 4K, a higher-res stock clip, or a good upscale. It is the one ambiguous scene.</li>
+        <li>Whether the channel follows YouTube's AI-disclosure rules for the clone segments. The videos describe the clones, but the platform label is not visible in the downloads.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout green">
+    <span class="label">The defensible headline</span>
+    <p>“House of El's 4K is a 1080p upscale; the channel is a rebrand of a real PhD/data scientist's old channel; the synthetic production and the AI panic are monetized.” Every clause in that sentence is supported by a file, an archive snapshot, or a public record.</p>
+  </div>
+
+  <div class="callout red">
+    <span class="label">Correction for the thread</span>
+    <p><b>“There is no real person” is false.</b> Elena Markoska is real, with a PhD from SDU and a Bank of England career. <b>“The character is a synthetic brand” is true.</b> Pseudonym, AI-enhanced face, AI clones, AI b-roll, 1080p→4K upscale. <b>“The 4K is real” is false.</b> It is a 1080p upscale. <b>“The AI panic is organic” is false.</b> It is a product. Keep the middle two; drop the first and last.</p>
+  </div>
+</section>
+
+<section id="repro">
+  <div class="sec-head"><span class="sec-num">09</span><h2>Reproducibility</h2></div>
+  <p class="lede">Everything here is repeatable from public files. The downloads, scripts and derived images are in the project folder. YouTube's formats change; the measurements are dated 26 October 2026.</p>
+
+  <h3>Files</h3>
+  <div class="table-wrap">
+    <table>
+      <caption>Project layout.</caption>
+      <thead><tr><th>Path</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td><code>rDKzAml5nn8_720p.webm</code></td><td>VP9 720p + Opus, 66.4 MiB</td></tr>
+        <tr><td><code>rDKzAml5nn8_1080p.webm</code></td><td>VP9 1080p + Opus, 97.7 MiB</td></tr>
+        <tr><td><code>rDKzAml5nn8_1440p.webm</code></td><td>VP9 1440p + Opus, 272.8 MiB</td></tr>
+        <tr><td><code>rDKzAml5nn8_2160p_vp9.webm</code></td><td>VP9 2160p + Opus, 509.3 MiB</td></tr>
+        <tr><td><code>house-of-el/index.html</code></td><td>This report</td></tr>
+        <tr><td><code>house-of-el/assets/</code></td><td>Figures, frames, charts, archived thumbnails</td></tr>
+        <tr><td><code>house-of-el/spectral.py</code></td><td>Radial FFT, high-pass, spectrum plots</td></tr>
+        <tr><td><code>house-of-el/roundtrip.py</code></td><td>4K→1080/1440/720→4K round-trip and cross-resolution PSNR/SSIM</td></tr>
+        <tr><td><code>house-of-el/timeseries.py</code></td><td>68-frame sample, per-frame metrics, histogram data</td></tr>
+        <tr><td><code>house-of-el/timeseries.csv</code></td><td>Raw per-frame numbers</td></tr>
+        <tr><td><code>house-of-el/exa_search.py</code></td><td>Targeted web search for the persona footprint</td></tr>
+        <tr><td><code>house-of-el/dl.sh</code></td><td>The exact yt-dlp download ladder</td></tr>
+        <tr><td><code>house-of-el/refs/</code></td><td>Full-resolution native 4K reference frames</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="small">The frame sequences (<code>frames*</code>, <code>seq*</code>) are generated by the commands below and are not included, to keep the folder small. The scripts read <code>ANALYSIS_DATA_DIR</code> (default: the script's directory); point it at the folder containing <code>frames1080/</code>, <code>seq4k/</code>, etc.</p>
+
+  <h3>Key commands</h3>
+  <details open>
+    <summary>Download, probe, extract frames</summary>
+    <pre><span class="c"># video-only ladder + original English audio</span>
+yt-dlp -f "247+251-20" --merge-output-format webm -o "rDKzAml5nn8_720p.%(ext)s"  "$URL"
+yt-dlp -f "248+251-20" --merge-output-format webm -o "rDKzAml5nn8_1080p.%(ext)s" "$URL"
+yt-dlp -f "271+251-20" --merge-output-format webm -o "rDKzAml5nn8_1440p.%(ext)s" "$URL"
+yt-dlp -f "313+251-20" --merge-output-format webm -o "rDKzAml5nn8_2160p_vp9.%(ext)s" "$URL"
+
+<span class="c"># one frame per 10 s, full resolution</span>
+ffmpeg -i rDKzAml5nn8_2160p_vp9.webm -vf "fps=1/10" -compression_level 1 seq4k/%04d.png
+
+<span class="c"># 1080p round-trip: 4K -> 1080 -> 4K (area down, Lanczos up)</span>
+<span class="c"># see house-of-el/roundtrip.py for the exact PSNR/SSIM code</span></pre>
+  </details>
+
+  <details>
+    <summary>Native 4K reference encode</summary>
+    <pre><span class="c"># 2-second VP9 at 6 Mbps, same ballpark as YouTube's 4K stream</span>
+ffmpeg -loop 1 -i ref_city_4k.png -t 2 -r 30 \
+  -vf "scale=3840:2160,format=yuv420p" \
+  -c:v libvpx-vp9 -b:v 6M -row-mt 1 -threads 8 ref_city_4k.webm
+
+ffmpeg -ss 1 -i ref_city_4k.webm -frames:v 1 ref_city_4k_frame.png</pre>
+  </details>
+
+  <h3>Limitations</h3>
+  <ul>
+    <li><b>One video.</b> The 4K upscale finding is specific to <code>rDKzAml5nn8</code>. The channel may upload other videos differently.</li>
+    <li><b>AI-generated content is soft.</b> A native 4K render of a smooth avatar could also round-trip well. The face's flat noise floor above 0.25 cyc/px and the 720≈1080 equality are what make “soft native 4K” unlikely.</li>
+    <li><b>The native reference is a photo, not a video.</b> It calibrates the codec/bitrate, not the content. The crowd scene is the closest content match and is treated as ambiguous.</li>
+    <li><b>PSNR is content-dependent.</b> We report conservative no-shift numbers; subpixel alignment can add 1–2 dB. The conclusion does not depend on that margin.</li>
+    <li><b>YouTube changes.</b> Formats, bitrates and <code>lmt</code> values are dated 26 October 2026. Re-running later may give different numbers.</li>
+  </ul>
+</section>
+
+<section id="appendix">
+  <div class="sec-head"><span class="sec-num">10</span><h2>Appendix</h2></div>
+
+  <h3 id="appendix-a">A. Full format ladder</h3>
+  <div class="table-wrap">
+    <table>
+      <caption>All video-only formats offered on 26 Oct 2026, sorted by resolution.</caption>
+      <thead><tr><th>ID</th><th>Ext</th><th>Resolution</th><th>FPS</th><th>Codec</th><th class="num">Video bitrate</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>160</td><td>mp4</td><td>256×144</td><td>30</td><td>AVC</td><td class="num">0.080</td><td>lowest</td></tr>
+        <tr><td>278</td><td>webm</td><td>256×144</td><td>30</td><td>VP9</td><td class="num">0.095</td><td></td></tr>
+        <tr><td>133</td><td>mp4</td><td>426×240</td><td>30</td><td>AVC</td><td class="num">0.175</td><td></td></tr>
+        <tr><td>242</td><td>webm</td><td>426×240</td><td>30</td><td>VP9</td><td class="num">0.138</td><td></td></tr>
+        <tr><td>134</td><td>mp4</td><td>640×360</td><td>30</td><td>AVC</td><td class="num">0.334</td><td></td></tr>
+        <tr><td>243</td><td>webm</td><td>640×360</td><td>30</td><td>VP9</td><td class="num">0.233</td><td></td></tr>
+        <tr><td>135</td><td>mp4</td><td>854×480</td><td>30</td><td>AVC</td><td class="num">0.603</td><td></td></tr>
+        <tr><td>244</td><td>webm</td><td>854×480</td><td>30</td><td>VP9</td><td class="num">0.374</td><td></td></tr>
+        <tr><td>136</td><td>mp4</td><td>1280×720</td><td>30</td><td>AVC</td><td class="num">1.168</td><td>AVC 720p</td></tr>
+        <tr><td><b>247</b></td><td><b>webm</b></td><td><b>1280×720</b></td><td><b>30</b></td><td><b>VP9</b></td><td class="num"><b>0.677</b></td><td><b>used</b></td></tr>
+        <tr><td>137</td><td>mp4</td><td>1920×1080</td><td>30</td><td>AVC</td><td class="num">2.194</td><td>AVC 1080p</td></tr>
+        <tr><td><b>248</b></td><td><b>webm</b></td><td><b>1920×1080</b></td><td><b>30</b></td><td><b>VP9</b></td><td class="num"><b>1.061</b></td><td><b>used</b></td></tr>
+        <tr><td>271</td><td>webm</td><td>2560×1440</td><td>30</td><td>VP9</td><td class="num">3.214</td><td>used</td></tr>
+        <tr><td>400</td><td>mp4</td><td>2560×1440</td><td>30</td><td>AV1</td><td class="num">2.531</td><td>AV1 1440p</td></tr>
+        <tr><td><b>313</b></td><td><b>webm</b></td><td><b>3840×2160</b></td><td><b>30</b></td><td><b>VP9</b></td><td class="num"><b>6.123</b></td><td><b>used</b></td></tr>
+        <tr><td>401</td><td>mp4</td><td>3840×2160</td><td>30</td><td>AV1</td><td class="num">4.402</td><td>metadata only</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="appendix-b">B. Frame data</h3>
+  <p>The full 68-frame table is in <code>house-of-el/timeseries.csv</code>. Columns: <code>t</code>, <code>psnr_rt1080</code>, <code>psnr_rt1440</code>, <code>psnr_up1080</code>, <code>psnr_up1440</code>, <code>hf_ratio</code>, <code>hf_mid</code>, <code>hf1080</code>, <code>var4</code>, <code>lap4</code>. The key rows:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th class="num">t (s)</th><th class="num">4K→1080→4K</th><th class="num">4K→1440→4K</th><th class="num">1080→4K</th><th class="num">1440→4K</th><th>Scene</th></tr></thead>
+      <tbody>
+        <tr><td class="num">240</td><td class="num">37.3</td><td class="num">41.6</td><td class="num">33.8</td><td class="num">36.7</td><td>city b-roll</td></tr>
+        <tr><td class="num">285</td><td class="num">35.7</td><td class="num">40.0</td><td class="num">28.3</td><td class="num">31.4</td><td>typography vortex</td></tr>
+        <tr><td class="num">360</td><td class="num">52.6</td><td class="num">54.3</td><td class="num">42.1</td><td class="num">44.8</td><td>talking head</td></tr>
+        <tr><td class="num">365</td><td class="num">29.1</td><td class="num">33.1</td><td class="num">25.6</td><td class="num">30.0</td><td>crowd b-roll</td></tr>
+        <tr><td class="num">480</td><td class="num">52.8</td><td class="num">55.0</td><td class="num">46.3</td><td class="num">48.5</td><td>talking head</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="appendix-c">C. Sources &amp; links</h3>
+  <ul class="small">
+    <li>Target video: <a href="https://www.youtube.com/watch?v=rDKzAml5nn8">youtube.com/watch?v=rDKzAml5nn8</a></li>
+    <li>Main channel: <a href="https://www.youtube.com/@HouseofEl">youtube.com/@HouseofEl</a> · AI channel: <a href="https://www.youtube.com/@houseofel-ai">youtube.com/@houseofel-ai</a></li>
+    <li>“You're Right — I'm AI generated (Here's The Proof)”: <a href="https://www.youtube.com/watch?v=K3SD34vHPe4">youtube.com/watch?v=K3SD34vHPe4</a></li>
+    <li>Website: <a href="https://houseofel.net/">houseofel.net</a> · book: <a href="https://houseofell.gumroad.com/l/isdum">houseofell.gumroad.com/l/isdum</a></li>
+    <li>Elena Markoska's PhD thesis: <a href="https://portal.findresearcher.sdu.dk/en/publications/a-framework-for-automated-real-time-performance-evaluation-of-sma/">SDU research portal</a> · DOI <a href="https://doi.org/10.21996/5hay-tm27">10.21996/5hay-tm27</a></li>
+    <li>OTOWN profile (5 Nov 2019), archived: <a href="https://web.archive.org/web/20191113021521/https://otown.dk/som-5-arig-ville-elena-have-en-ph-d-grad-nu-vil-hun-redde-verden/">web.archive.org/…/otown.dk/…</a></li>
+    <li>Bank of England Staff Working Paper 924: <a href="https://www.bankofengland.co.uk/working-paper/2021/impacts-of-the-covid-19-crisis-evidence-from-2-million-uk-smes">Impacts of the Covid-19 crisis: evidence from 2 million UK SMEs</a> (Hurley, Karmakar, Markoska, Walczak, Walker, 2021)</li>
+    <li>LinkedIn (login-walled; the direct profile is not linked here) — the public education/experience record matches the SDU and Bank of England sources above.</li>
+    <li>Wayback, 2021 channel snapshot: <a href="https://web.archive.org/web/20210117055850/https://www.youtube.com/c/walkthewalk007">web.archive.org/web/20210117055850/…/walkthewalk007</a></li>
+    <li>Wayback, 2021 channel ID snapshot: <a href="https://web.archive.org/web/20210117132432/https://www.youtube.com/channel/UCJ52xpIoq5aKaIU_ZP40-nQ">web.archive.org/web/20210117132432/…/UCJ52xpIoq5aKaIU_ZP40-nQ</a></li>
+    <li>r/Destiny discussion: <a href="https://www.reddit.com/r/Destiny/comments/1qg879h/house_of_el/">reddit.com/r/Destiny/comments/1qg879h</a> · r/artificial: <a href="https://www.reddit.com/r/artificial/comments/1vbrvq2/i_watched_el_phd_in_computer_science_runs_house/">reddit.com/r/artificial/comments/1vbrvq2</a></li>
+    <li>Critical blog post (unreachable at analysis time; snippet via Exa): <a href="https://kingofriver.com/how-to-get-allured-by-an-e-girl-on-houseofel-ask-google/">kingofriver.com/…/houseofel-ask-google</a></li>
+    <li>Third-party profile: <a href="https://archania.org/p/individuals/internet-personalities/house-of-el">archania.org/…/house-of-el</a> (treats credentials as self-description)</li>
+    <li>YouTube subscriber trackers: <a href="https://realtimesubcount.com/UCJ52xpIoq5aKaIU_ZP40-nQ">realtimesubcount.com/UCJ52…</a>, <a href="https://asknaveen.com/channel/@houseofel">asknaveen.com/channel/@houseofel</a></li>
+    <li>Native 4K references: Unsplash photo IDs <code>1477959858617-67f85cf4f1df</code> (city) and <code>1500648767791-00dcc994a43e</code> (portrait), downloaded at 3840 px and re-encoded at 6 Mbps.</li>
+  </ul>
+
+  <div class="callout">
+    <span class="label">A note on tone</span>
+    <p>This is a technical and archival analysis of public material. It is not a legal finding, a doxx, or a claim that a private individual is obligated to reveal her identity. The name and professional record are public: the SDU thesis, the Bank of England working papers and a 2019 local-news profile. We do not publish private contact details, addresses, family information or private social accounts; the LinkedIn profile is referenced as a matching professional record, not linked. The point is the production: the 4K is an upscale, the pipeline is synthetic, and the business model turns the ambiguity into content.</p>
+  </div>
+</section>
+
+  </main>
+</div>
+
+<div class="foot">
+  <p>Report generated 26 October 2026. All measurements come from the public YouTube renditions downloaded with <span class="mono">yt-dlp</span> and processed with <span class="mono">ffmpeg</span>, Python, NumPy, OpenCV, scikit-image and matplotlib. No generative model was used to alter the frames. The native 4K reference images are Unsplash photographs (free license), re-encoded with VP9 at the same 6 Mbps for calibration.</p>
+  <p>Third-party images — YouTube thumbnails, archived channel art and Unsplash references — are used for criticism, commentary and analysis; rights remain with their owners. If you are the subject and want a correction or removal, open an issue on the repository.</p>
+  <p><a class="top" href="#top">↑ Back to top</a></p>
+</div>
+
+</div>
+</body>
+</html>

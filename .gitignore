@@ -1,0 +1,7 @@
+*.webm
+*.mp4
+*.mkv
+*.part
+.DS_Store
+__pycache__/
+venv/
